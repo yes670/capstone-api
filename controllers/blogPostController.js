@@ -29,9 +29,30 @@ export const createPost = async (req, res) => {
 };
 
 export const updatePost = async (req, res) => {
-  const p = await BlogPost.findById(req.params.id);
-  if (p.author.toString() !== req.user._id.toString())
-    return res.status(403).json({ message: "Not allowed" });
+  try { 
+    const post = await BlogPost.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" });
+    }
+
+    if (post.author.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: "Not authorized to update this post" });
+    }
+
+    
+    post.title = req.body.title || post.title;
+    post.content = req.body.content || post.content;
+    
+    
+    post.summary = req.body.summary !== undefined ? req.body.summary : post.summary;
+
+    const updatedPost = await post.save();
+    res.json(updatedPost);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+
 
   p.title = req.body.title || p.title;
   p.content = req.body.content || p.content;
