@@ -1,52 +1,52 @@
-// controllers/commentController.js --- 最终正确版本
+// 后端 controllers/commentController.js --- 添加了详细日志的版本
 
-import Comment from '../models/commentModel.js';
-import BlogPost from '../models/blogPostModel.js';
-
-// @desc    Create a new comment for a blog post
-// @route   POST /api/blog/:id/comments
-// @access  Private
 export const createComment = async (req, res) => {
+  console.log("--- 1. Received request to create comment ---");
   try {
-    // 1. 从前端请求中获取数据
-    // 前端发送的是 { content: '...' }
-    const { content } = req.body; 
-    const authorId = req.user._id; // 从 protect 中间件获取作者ID
-    const postId = req.params.id; // 从 URL 参数获取文章ID
+    // 打印出所有能拿到的信息
+    console.log("Request Body (req.body):", req.body);
+    console.log("Request User (req.user):", req.user);
+    console.log("Request Params (req.params):", req.params);
 
-    // 2. 检查评论内容是否为空
-    if (!content) {
-      return res.status(400).json({ message: "Comment content cannot be empty." });
+    const { content } = req.body;
+    const authorId = req.user._id;
+    const postId = req.params.id;
+
+    console.log(`--- 2. Parsed data: content='${content}', authorId='${authorId}', postId='${postId}' ---`);
+
+    if (!content || !authorId || !postId) {
+      console.log("--- ERROR: Missing required data ---");
+      return res.status(400).json({ message: "Content, author, and post ID are required." });
     }
 
-    // 3. 检查博客文章是否存在
     const postExists = await BlogPost.findById(postId);
     if (!postExists) {
+        console.log(`--- ERROR: Blog post with ID ${postId} not found ---`);
         return res.status(404).json({ message: "Blog post not found." });
     }
+    console.log("--- 3. Found the blog post successfully ---");
 
-    // 4. 创建新的 Comment 实例，提供所有必填字段
     const newComment = new Comment({
-      body: content,   // 将前端的 'content' 映射到模型的 'body'
+      body: content,
       author: authorId,
       post: postId,
     });
+    console.log("--- 4. Created new Comment instance:", newComment);
 
-    // 5. 保存新的评论到数据库
     await newComment.save();
-    
-    // 6. (可选但推荐) 将新评论的ID添加到 BlogPost 的 comments 数组中
-    //    如果你的 BlogPost 模型有 comments 数组的话
+    console.log("--- 5. Saved the new comment successfully ---");
+
     postExists.comments.push(newComment._id);
     await postExists.save();
-    
-    // 7. 填充作者信息后返回新创建的评论，以便前端可以直接显示
+    console.log("--- 6. Pushed comment to post's comments array and saved post ---");
+
     const populatedComment = await Comment.findById(newComment._id).populate('author', 'username');
-    
+    console.log("--- 7. Populated the new comment successfully ---");
+
     res.status(201).json(populatedComment);
 
   } catch (error) {
-    console.error("Error creating comment:", error);
+    console.error("--- FINAL CRASH in createComment ---:", error); // 打印出导致500的最终错误
     res.status(500).json({ message: "Server error while creating comment." });
   }
 };
