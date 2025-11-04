@@ -5,16 +5,24 @@ export const getAllPosts = async (req, res) => {
   res.json(posts);
 };
 
+
+
 export const getPost = async (req, res) => {
-  const post = await BlogPost.findById(req.params.id)
-    .populate("author", "username") // 填充文章作者，只选择 username
-    .populate({
-      path: 'comments', // 填充 comments 虚拟字段
-      populate: {
-        path: 'author', // 对每个 comment，再填充其 author 字段
-        select: 'username' // 对于评论的作者，也只选择 username
-      }
-    });
+  try { // 加上 try...catch 是一个好习惯
+    const post = await BlogPost.findById(req.params.id)
+      .populate("author", "username"); // 只 populate 作者
+
+    
+    if (post) {
+      res.json(post);
+    } else {
+      res.status(404).json({ message: 'Blog post not found' });
+    }
+  } catch (error) {
+    console.error("Error fetching single post:", error);
+    res.status(500).json({ message: "Server error while fetching post." });
+  }
+
 
   if (post) {
     res.json(post);
